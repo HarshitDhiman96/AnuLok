@@ -1,0 +1,24 @@
+{
+  "name": "anulok-furniture",
+  "version": "1.0.0",
+  "description": "Anulok Luxury Furniture E-Commerce Platform",
+  "scripts": {
+    "dev": "concurrently -n \"SERVER,CLIENT\" -c \"yellow,cyan\" \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
+    "client": "npm --prefix client run dev",
+    "server": "npm --prefix server run dev",
+    "build": "npm --prefix client run build",
+    "test:api": "node --test server/test-api.js"
+  },
+  "keywords": [
+    "furniture",
+    "ecommerce",
+    "luxury",
+    "react",
+    "express"
+  ],
+  "author": "Anulok",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
