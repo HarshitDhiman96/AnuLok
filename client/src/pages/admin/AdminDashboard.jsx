@@ -63,6 +63,27 @@ export default function AdminDashboard({ onNavigateTab }) {
       desc: 'Processed customer orders'
     },
     {
+      label: 'Units Sold',
+      value: summary?.totalSales || 0,
+      icon: TrendingUp,
+      color: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+      desc: 'Items in non-cancelled orders'
+    },
+    {
+      label: 'Open Orders',
+      value: summary?.pendingOrders || 0,
+      icon: ShoppingBag,
+      color: 'bg-orange-50 text-orange-700 border-orange-200',
+      desc: 'Orders awaiting delivery'
+    },
+    {
+      label: 'Inventory Value',
+      value: formatPrice(summary?.inventoryValue || 0),
+      icon: Layers,
+      color: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      desc: 'Current stock at listed price'
+    },
+    {
       label: 'Total Products',
       value: summary?.totalProducts || 0,
       icon: Package,

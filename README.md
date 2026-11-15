@@ -25,7 +25,7 @@ Built with a bespoke aesthetic: warm cream, linen, natural teak wood, honed marb
 
 * **Frontend**: React 19, Vite, Tailwind CSS, Lucide React, React Router v7.
 * **Backend**: Node.js, Express.js, JWT (`jsonwebtoken`), Password Hashing (`bcryptjs`), CORS.
-* **Database & Persistence**: MongoDB Atlas via Mongoose. Products, categories, coupons, orders, and user accounts are stored in MongoDB; the existing local store data seeds empty catalog/order collections on first startup.
+* **Database & Persistence**: MongoDB Atlas via Mongoose. Products, categories, coupons, orders, and user accounts are stored in MongoDB; admin revenue, sales, and inventory metrics are calculated from those persisted records. Admin product and category image uploads are stored with their catalog records.
 * **Package Management**: Unified monorepo runner with `concurrently`.
 
 ---

@@ -122,7 +122,6 @@ export default function Footer() {
               <li><Link to="/about#sustainability" className="hover:text-white transition-colors">Sustainable Forestry</Link></li>
               <li><Link to="/contact" className="hover:text-white transition-colors">Showroom Appointments</Link></li>
               <li><Link to="/my-orders" className="hover:text-white transition-colors">Order Tracking</Link></li>
-              <li><Link to="/login?role=admin" className="hover:text-amber-400 transition-colors">Staff Portal</Link></li>
             </ul>
           </div>
 

@@ -36,10 +36,10 @@ export default function AdminLayout({ children, activeTab, setActiveTab }) {
           </p>
           <div className="space-y-2">
             <Link
-              to="/login?role=admin"
+              to="/login"
               className="block w-full py-3 bg-anulok-espresso text-white text-xs uppercase tracking-wider font-semibold rounded-xl hover:bg-anulok-wood transition-colors"
             >
-              Sign In as Administrator
+              Sign In
             </Link>
             <Link
               to="/"

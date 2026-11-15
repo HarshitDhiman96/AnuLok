@@ -157,6 +157,17 @@ class MongoStore {
     }));
   }
 
+  async passwordMatchesAdmin(password) {
+    const admins = this.isMongo
+      ? await User.find({ role: 'admin' }).select('+passwordHash')
+      : localStore.getUsers().filter(user => user.role === 'admin');
+    for (const admin of admins) {
+      const hash = admin.passwordHash || admin.password;
+      if (hash && await bcrypt.compare(password, hash)) return true;
+    }
+    return false;
+  }
+
   async createUser(userData) {
     if (this.isMongo) {
       return await User.create(userData);

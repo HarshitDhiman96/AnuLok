@@ -216,14 +216,6 @@ export default function Navbar() {
                         >
                           Create Account
                         </Link>
-                        <div className="border-t border-stone-100 my-1 pt-1">
-                          <Link
-                            to="/login?role=admin"
-                            className="flex items-center gap-1.5 px-4 py-1.5 text-xs text-stone-500 hover:text-anulok-wood"
-                          >
-                            <ShieldAlert className="w-3.5 h-3.5 text-anulok-amber" /> Admin Portal
-                          </Link>
-                        </div>
                       </>
                     )}
                   </div>

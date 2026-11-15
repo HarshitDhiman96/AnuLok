@@ -84,6 +84,22 @@ export default function AdminCategories() {
     }
   };
 
+  const handleImageUpload = (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      addToast('Please choose an image file.', 'error');
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      addToast('Choose an image smaller than 4 MB.', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setForm(current => ({ ...current, image: reader.result }));
+    reader.onerror = () => addToast('Could not read that image.', 'error');
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -173,7 +189,11 @@ export default function AdminCategories() {
               </div>
 
               <div>
-                <label className="text-xs uppercase font-bold text-stone-600 block mb-1">Image URL</label>
+                <label className="text-xs uppercase font-bold text-stone-600 block mb-1">Upload category image</label>
+                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e.target.files?.[0])}
+                  className="w-full bg-anulok-cream border border-stone-300 rounded-xl px-4 py-2.5 text-xs" />
+                {form.image && <img src={form.image} alt="Category preview" className="mt-2 h-28 w-full rounded-xl object-cover" />}
+                <label className="text-xs uppercase font-bold text-stone-600 block mb-1 mt-3">Or use an image URL</label>
                 <input
                   type="text"
                   value={form.image}

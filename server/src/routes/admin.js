@@ -21,6 +21,9 @@ router.get('/stats', verifyToken, requireAdmin, async (req, res) => {
     // Revenue calculation (from orders that aren't cancelled)
     const validOrders = orders.filter(o => o.orderStatus !== 'Cancelled');
     const totalRevenue = validOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+    const totalSales = validOrders.reduce((sum, order) => sum + (order.items || []).reduce((units, item) => units + (item.quantity || 1), 0), 0);
+    const pendingOrders = orders.filter(o => !['Cancelled', 'Delivered'].includes(o.orderStatus)).length;
+    const inventoryValue = products.reduce((sum, product) => sum + (product.price || 0) * (product.stock || 0), 0);
 
     // Low stock products (stock <= 5)
     const lowStockProducts = products.filter(p => (p.stock || 0) <= 5);
@@ -108,7 +111,10 @@ router.get('/stats', verifyToken, requireAdmin, async (req, res) => {
     res.json({
       summary: {
         totalRevenue,
-        totalOrders: orders.length,
+        totalOrders: validOrders.length,
+        totalSales,
+        pendingOrders,
+        inventoryValue,
         totalProducts: products.length,
         totalCustomers: customers.length,
         lowStockCount: lowStockProducts.length,

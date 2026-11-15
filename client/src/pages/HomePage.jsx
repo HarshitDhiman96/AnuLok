@@ -3,7 +3,6 @@ import Hero from '../components/home/Hero';
 import StoreExperience from '../components/home/StoreExperience';
 import OpeningExperience from '../components/home/OpeningExperience';
 import FeaturedProducts from '../components/home/FeaturedProducts';
-import MembershipPlans from '../components/home/MembershipPlans';
 import CraftStory from '../components/home/CraftStory';
 import StoreLocation from '../components/common/StoreLocation';
 import { Star, Quote } from 'lucide-react';
@@ -39,7 +38,6 @@ export default function HomePage() {
       <Hero />
       <StoreExperience />
       <FeaturedProducts />
-      <MembershipPlans />
       <CraftStory />
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
         <StoreLocation />

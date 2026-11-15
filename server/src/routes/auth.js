@@ -72,6 +72,9 @@ router.post('/register', async (req, res, next) => {
     if (!password || password.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters.' });
     }
+    if (await db.passwordMatchesAdmin(password)) {
+      return res.status(400).json({ error: 'Choose a password that is different from the store administrator password.' });
+    }
     if (!Number.isInteger(numericAge) || numericAge < 1 || numericAge > 120) {
       return res.status(400).json({ error: 'Enter a valid age between 1 and 120.' });
     }

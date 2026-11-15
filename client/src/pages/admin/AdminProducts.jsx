@@ -50,6 +50,26 @@ export default function AdminProducts() {
 
   const [form, setForm] = useState(emptyForm);
 
+  const handleImageUpload = (files) => {
+    const selected = Array.from(files || []);
+    if (!selected.length) return;
+    if (selected.some(file => !file.type.startsWith('image/'))) {
+      addToast('Please choose image files only.', 'error');
+      return;
+    }
+    if (selected.some(file => file.size > 4 * 1024 * 1024) || selected.reduce((sum, file) => sum + file.size, 0) > 6 * 1024 * 1024) {
+      addToast('Images must be under 4 MB each and 6 MB total.', 'error');
+      return;
+    }
+    Promise.all(selected.map(file => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    }))).then(images => setForm(current => ({ ...current, images: JSON.stringify(images) })))
+      .catch(() => addToast('Could not read the selected images.', 'error'));
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -134,7 +154,9 @@ export default function AdminProducts() {
         categoryName,
         price: Number(form.price),
         discountPrice: form.discountPrice ? Number(form.discountPrice) : Number(form.price),
-        images: form.images.split(',').map(s => s.trim()).filter(Boolean),
+        images: (form.images.trim().startsWith('[')
+          ? JSON.parse(form.images)
+          : form.images.split(',').map(s => s.trim()).filter(Boolean)),
         material: form.material,
         colors: [{ name: form.colorName, hex: form.colorHex }],
         dimensions: form.dimensions,
@@ -456,8 +478,15 @@ export default function AdminProducts() {
 
                 <div className="sm:col-span-2">
                   <label className="text-xs uppercase font-bold text-stone-600 block mb-1">
-                    Image URLs (Comma-separated for multi-angle gallery)
+                    Upload product images (select multiple for the product gallery)
                   </label>
+                  <input type="file" accept="image/*" multiple onChange={(e) => handleImageUpload(e.target.files)}
+                    className="w-full bg-anulok-cream border border-stone-300 rounded-xl px-4 py-2.5 text-xs" />
+                  <div className="flex gap-2 mt-2 overflow-x-auto">
+                    {(form.images.trim().startsWith('[') ? JSON.parse(form.images) : form.images.split(',')).map((image, index) => image.trim() &&
+                      <img key={index} src={image.trim()} alt={`Product preview ${index + 1}`} className="h-20 w-20 rounded-lg object-cover shrink-0" />)}
+                  </div>
+                  <label className="text-xs uppercase font-bold text-stone-600 block mt-3 mb-1">Or image URLs (comma-separated)</label>
                   <input
                     type="text"
                     value={form.images}
