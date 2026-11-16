@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
 // POST /api/categories (Admin only)
 router.post('/', verifyToken, requireAdmin, async (req, res) => {
   try {
-    const { name, description, image } = req.body;
+    const { name, description, image, featured } = req.body;
     if (!name) {
       return res.status(400).json({ error: 'Category name is required' });
     }
@@ -25,7 +25,8 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
     const newCat = await db.addCategory({
       name,
       description: description || '',
-      image: image || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80'
+      image: image || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80',
+      featured: Boolean(featured)
     });
 
     res.status(201).json({ message: 'Category created successfully', category: newCat });
@@ -37,7 +38,9 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
 // PUT /api/categories/:id (Admin only)
 router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
   try {
-    const updated = await db.updateCategory(req.params.id, req.body);
+    const updates = { ...req.body };
+    if (updates.featured !== undefined) updates.featured = Boolean(updates.featured);
+    const updated = await db.updateCategory(req.params.id, updates);
     if (!updated) {
       return res.status(404).json({ error: 'Category not found' });
     }

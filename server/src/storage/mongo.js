@@ -169,12 +169,21 @@ class MongoStore {
 
   async checkUserExists(alternatives) {
     if (this.isMongo) {
-      return await User.exists({ $or: alternatives });
+      const users = await User.find().select('email phone').lean();
+      return users.some(user => alternatives.some(alt => {
+        if (alt.email && user.email && user.email.toLowerCase() === alt.email.toLowerCase()) return true;
+        if (alt.phone && user.phone) {
+          try { return normalizePhone(user.phone) === alt.phone; } catch { return false; }
+        }
+        return false;
+      }));
     }
     const users = localStore.getUsers();
     return users.some(u => alternatives.some(alt => {
       if (alt.email && u.email && u.email.toLowerCase() === alt.email.toLowerCase()) return true;
-      if (alt.phone && u.phone && u.phone === alt.phone) return true;
+      if (alt.phone && u.phone) {
+        try { return normalizePhone(u.phone) === alt.phone; } catch { return false; }
+      }
       return false;
     }));
   }
@@ -200,6 +209,14 @@ class MongoStore {
       ...userData
     });
     return newUser;
+  }
+
+  async recordUserLogin(id, loggedInAt = new Date().toISOString()) {
+    if (this.isMongo) {
+      const result = await User.updateOne({ id }, { $set: { lastLoginAt: loggedInAt } });
+      return result.matchedCount > 0;
+    }
+    return Boolean(localStore.updateUser(id, { lastLoginAt: loggedInAt }));
   }
 
   async getUsers() {
@@ -342,9 +359,15 @@ class MongoStore {
   // Categories
   async getCategories() {
     if (this.isMongo) {
-      return this.getRecords('categories');
+      return (await this.getRecords('categories')).map((category, index) => ({
+        ...category,
+        featured: category.featured ?? index < 4
+      }));
     }
-    return localStore.getCategories();
+    return localStore.getCategories().map((category, index) => ({
+      ...category,
+      featured: category.featured ?? index < 4
+    }));
   }
 
   async getCategoryById(id) {
@@ -355,11 +378,12 @@ class MongoStore {
   }
 
   async addCategory(category) {
-    const id = this.isMongo ? `cat-${new mongoose.Types.ObjectId().toString()}` : `cat-${Date.now()}`;
+    const id = `cat-${new mongoose.Types.ObjectId().toString()}`;
     const newCategory = {
       id,
       slug: (category.name || 'category').toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       itemCount: 0,
+      featured: Boolean(category.featured),
       ...category
     };
     if (this.isMongo) {

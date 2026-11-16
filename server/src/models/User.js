@@ -35,7 +35,8 @@ const userSchema = new mongoose.Schema({
   cartCoupon: { type: mongoose.Schema.Types.Mixed, default: null },
   wishlist: { type: [String], default: [] },
   role: { type: String, enum: ['customer', 'admin'], default: 'customer' },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  lastLoginAt: { type: Date, default: null }
 }, { timestamps: false });
 
 userSchema.set('toJSON', {

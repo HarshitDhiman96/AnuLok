@@ -10,7 +10,8 @@ const initialForm = {
   phone: '',
   age: '',
   gender: '',
-  password: ''
+  password: '',
+  address: ''
 };
 
 export default function RegisterPage() {
@@ -72,8 +73,24 @@ export default function RegisterPage() {
           </div>
 
           <div>
+            <label htmlFor="register-address" className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-stone-600">Delivery Address *</label>
+            <textarea
+              id="register-address"
+              name="address"
+              autoComplete="street-address"
+              required
+              maxLength={300}
+              value={formData.address}
+              onChange={handleChange}
+              placeholder="Your delivery address"
+              rows={2}
+              className="w-full rounded-xl border border-stone-300 bg-anulok-cream px-4 py-3 text-sm outline-none focus:border-anulok-wood"
+            />
+          </div>
+
+          <div>
             <label htmlFor="register-email" className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-stone-600">
-              Email Address <span className="font-normal normal-case">(optional)</span>
+              Email Address *
             </label>
             <div className="relative">
               <input
@@ -81,6 +98,7 @@ export default function RegisterPage() {
                 name="email"
                 type="email"
                 autoComplete="email"
+                required
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="you@example.com"

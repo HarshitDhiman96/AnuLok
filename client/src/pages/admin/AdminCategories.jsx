@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, FolderTree, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, X } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
@@ -11,6 +11,7 @@ export default function AdminCategories() {
   const [form, setForm] = useState({
     name: '',
     description: '',
+    featured: false,
     image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80'
   });
   const [saving, setSaving] = useState(false);
@@ -37,6 +38,7 @@ export default function AdminCategories() {
     setForm({
       name: '',
       description: '',
+      featured: false,
       image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80'
     });
     setIsModalOpen(true);
@@ -47,6 +49,7 @@ export default function AdminCategories() {
     setForm({
       name: c.name,
       description: c.description || '',
+      featured: Boolean(c.featured),
       image: c.image || ''
     });
     setIsModalOpen(true);
@@ -213,6 +216,11 @@ export default function AdminCategories() {
                   className="w-full bg-anulok-cream border border-stone-300 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-anulok-wood"
                 />
               </div>
+
+              <label className="flex items-center gap-3 rounded-xl border border-stone-200 bg-anulok-cream px-4 py-3 text-sm text-stone-700">
+                <input type="checkbox" checked={form.featured} onChange={(e) => setForm({ ...form, featured: e.target.checked })} className="h-4 w-4 accent-anulok-wood" />
+                <span><strong className="block text-xs uppercase tracking-wide">Featured category</strong><span className="text-xs text-stone-500">Show this category on the homepage.</span></span>
+              </label>
 
               <div className="pt-4 border-t border-stone-200 flex justify-end gap-3">
                 <button

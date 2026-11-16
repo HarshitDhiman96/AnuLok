@@ -104,7 +104,8 @@ router.get('/stats', verifyToken, requireAdmin, async (req, res) => {
         phone: c.phone || 'N/A',
         ordersCount: custOrders.length,
         totalSpend,
-        createdAt: c.createdAt
+        createdAt: c.createdAt,
+        lastLoginAt: c.lastLoginAt || null
       };
     });
 
@@ -147,7 +148,8 @@ router.get('/customers', verifyToken, requireAdmin, async (req, res) => {
         phone: c.phone || 'N/A',
         ordersCount: custOrders.length,
         totalSpend,
-        createdAt: c.createdAt
+        createdAt: c.createdAt,
+        lastLoginAt: c.lastLoginAt || null
       };
     });
 

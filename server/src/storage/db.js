@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
+import { randomUUID } from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -715,7 +716,7 @@ class StorageManager {
   getUserById(id) { return this.data.users.find(u => u.id === id); }
   getUserByEmail(email) { return this.data.users.find(u => u.email.toLowerCase() === email.toLowerCase()); }
   addUser(user) {
-    const newUser = { id: `user-${Date.now()}`, createdAt: new Date().toISOString(), ...user };
+    const newUser = { id: `user-${randomUUID()}`, createdAt: new Date().toISOString(), ...user };
     this.data.users.push(newUser);
     this.save();
     return newUser;
@@ -767,6 +768,7 @@ class StorageManager {
       id: `cat-${Date.now()}`,
       slug: (category.name || 'category').toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       itemCount: 0,
+      featured: Boolean(category.featured),
       ...category
     };
     this.data.categories.push(newCategory);

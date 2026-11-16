@@ -1,6 +1,7 @@
 import '../config/env.js';
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import { randomUUID } from 'crypto';
 import { db, normalizePhone } from '../storage/mongo.js';
 import { generateToken, verifyToken } from '../middleware/auth.js';
 
@@ -58,7 +59,7 @@ router.post('/register', async (req, res, next) => {
 
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await db.createUser({
-      id: `user-${Date.now()}`,
+      id: `user-${randomUUID()}`,
       name: normalizedName,
       email: normalizedEmail,
       phone: normalizedPhone,
@@ -108,6 +109,8 @@ router.post('/login', async (req, res, next) => {
     if (!hashToCompare || !await bcrypt.compare(password, hashToCompare)) {
       return res.status(401).json({ error: 'Invalid email/phone or password.' });
     }
+
+    await db.recordUserLogin(user.id);
 
     const safeUser = publicUser(user);
     return res.json({
