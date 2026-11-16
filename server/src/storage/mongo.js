@@ -20,7 +20,7 @@ const legacyStorePath = path.resolve(currentDir, '../../data/store.json');
 const plainUser = (user) => {
   if (!user) return null;
   const value = user.toObject ? user.toObject() : user;
-  const { _id, __v, passwordHash, ...safeUser } = value;
+  const { _id, __v, passwordHash, cart, cartCoupon, wishlist, ...safeUser } = value;
   return safeUser;
 };
 
@@ -49,10 +49,14 @@ class MongoStore {
         return;
       } catch (err) {
         console.warn(`[Anulok Storage] MongoDB connection attempt failed: ${err.message}`);
+        if (process.env.NODE_ENV === 'production' || uri) throw err;
         console.warn('[Anulok Storage] Operating in resilient local storage mode. Update MONGODB_URI in server/.env to reconnect.');
       }
     } else {
       console.log('[Anulok Storage] No MONGODB_URI configured in server/.env. Operating in resilient local storage mode.');
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('MONGODB_URI must be configured in production; refusing to start with temporary local storage.');
+      }
     }
     this.isMongo = false;
     await this.bootstrapAdmin();
@@ -251,6 +255,40 @@ class MongoStore {
     return plainUser(localStore.updateUser(id, allowed));
   }
 
+  async getUserCart(id) {
+    if (this.isMongo) {
+      const user = await User.findOne({ id }).select('cart cartCoupon').lean();
+      return { items: user?.cart || [], appliedCoupon: user?.cartCoupon || null };
+    }
+    const user = localStore.getUserById(id);
+    return { items: user?.cart || [], appliedCoupon: user?.cartCoupon || null };
+  }
+
+  async saveUserCart(id, items, coupon) {
+    if (this.isMongo) {
+      const result = await User.updateOne({ id }, { $set: { cart: items, cartCoupon: coupon } });
+      return result.matchedCount > 0;
+    }
+    return Boolean(localStore.updateUser(id, { cart: items, cartCoupon: coupon }));
+  }
+
+  async getUserWishlist(id) {
+    const user = this.isMongo
+      ? await User.findOne({ id }).select('wishlist').lean()
+      : localStore.getUserById(id);
+    const ids = user?.wishlist || [];
+    const products = await this.getProducts();
+    return ids.map(productId => products.find(product => product.id === productId)).filter(Boolean);
+  }
+
+  async saveUserWishlist(id, productIds) {
+    if (this.isMongo) {
+      const result = await User.updateOne({ id }, { $set: { wishlist: productIds } });
+      return result.matchedCount > 0;
+    }
+    return Boolean(localStore.updateUser(id, { wishlist: productIds }));
+  }
+
   // Products
   async getProducts() {
     if (this.isMongo) {
@@ -443,8 +481,8 @@ class MongoStore {
     };
 
     if (this.isMongo) {
+      const session = await mongoose.startSession();
       try {
-        const session = await mongoose.startSession();
         await session.withTransaction(async () => {
           await StoreRecord.create([{
             kind: 'orders',
@@ -457,8 +495,14 @@ class MongoStore {
               kind: 'products',
               id: item.productId
             }).session(session);
-            if (!product || typeof product.data.stock !== 'number') continue;
-            product.data.stock = Math.max(0, product.data.stock - (item.quantity || 1));
+            if (!product) throw new Error(`Product ${item.productId} is no longer available.`);
+            const quantity = Math.max(1, Math.floor(Number(item.quantity) || 1));
+            if (typeof product.data.stock === 'number') {
+              if (product.data.stock < quantity) {
+                throw new Error(`${product.data.name || 'A product'} does not have enough stock.`);
+              }
+              product.data.stock -= quantity;
+            }
             product.markModified('data');
             await product.save({ session });
           }
@@ -475,12 +519,9 @@ class MongoStore {
             }
           }
         });
+        return newOrder;
+      } finally {
         await session.endSession();
-        return newOrder;
-      } catch (err) {
-        console.warn('Mongo order transaction error, inserting directly:', err.message);
-        await this.insertRecord('orders', newOrder);
-        return newOrder;
       }
     } else {
       return localStore.addOrder(newOrder);

@@ -42,6 +42,42 @@ export const api = {
     return data;
   },
 
+  async getCart() {
+    const res = await fetch(`${API_BASE_URL}/auth/cart`, { headers: getAuthHeaders() });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to load cart');
+    return data;
+  },
+
+  async saveCart(items, appliedCoupon = null) {
+    const res = await fetch(`${API_BASE_URL}/auth/cart`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ items, appliedCoupon })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to save cart');
+    return data;
+  },
+
+  async getWishlist() {
+    const res = await fetch(`${API_BASE_URL}/auth/wishlist`, { headers: getAuthHeaders() });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to load wishlist');
+    return data;
+  },
+
+  async saveWishlist(productIds) {
+    const res = await fetch(`${API_BASE_URL}/auth/wishlist`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ productIds })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to save wishlist');
+    return data;
+  },
+
   async changePassword(currentPassword, newPassword) {
     const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
       method: 'POST',

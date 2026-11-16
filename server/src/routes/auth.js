@@ -134,6 +134,90 @@ router.get('/me', verifyToken, async (req, res, next) => {
   }
 });
 
+router.get('/cart', verifyToken, async (req, res, next) => {
+  try {
+    return res.json(await db.getUserCart(req.user.id));
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.put('/cart', verifyToken, async (req, res, next) => {
+  try {
+    const items = req.body.items;
+    if (!Array.isArray(items) || items.length > 100) {
+      return res.status(400).json({ error: 'Cart must contain no more than 100 items.' });
+    }
+    if (items.some(item => !item || typeof item !== 'object' || Array.isArray(item))) {
+      return res.status(400).json({ error: 'Cart items must be valid objects.' });
+    }
+    const safeItems = items.map((item) => ({
+      cartItemId: String(item.cartItemId || '').slice(0, 200),
+      id: String(item.id || '').slice(0, 100),
+      name: String(item.name || '').slice(0, 200),
+      slug: String(item.slug || '').slice(0, 200),
+      price: Number(item.price) || 0,
+      originalPrice: Number(item.originalPrice) || 0,
+      discountPercentage: Number(item.discountPercentage) || 0,
+      image: String(item.image || '').slice(0, 2000),
+      material: String(item.material || '').slice(0, 300),
+      category: String(item.category || '').slice(0, 100),
+      categoryName: String(item.categoryName || '').slice(0, 150),
+      colorName: String(item.colorName || '').slice(0, 100),
+      colorHex: String(item.colorHex || '').slice(0, 20),
+      quantity: Math.max(1, Math.min(99, Math.floor(Number(item.quantity) || 1))),
+      stock: Math.max(0, Number(item.stock) || 0)
+    }));
+    if (safeItems.some(item => !item.id || !item.cartItemId || !item.name)) {
+      return res.status(400).json({ error: 'Each cart item must have a product ID, cart item ID, and name.' });
+    }
+    const coupon = req.body.appliedCoupon && typeof req.body.appliedCoupon === 'object'
+      ? {
+          code: String(req.body.appliedCoupon.code || '').slice(0, 50),
+          name: String(req.body.appliedCoupon.name || '').slice(0, 100),
+          discountType: ['percentage', 'fixed'].includes(req.body.appliedCoupon.discountType)
+            ? req.body.appliedCoupon.discountType
+            : 'fixed',
+          discountValue: Math.max(0, Number(req.body.appliedCoupon.discountValue) || 0),
+          maximumDiscount: Math.max(0, Number(req.body.appliedCoupon.maximumDiscount) || 0),
+          discountAmount: Math.max(0, Number(req.body.appliedCoupon.discountAmount) || 0)
+        }
+      : null;
+    const saved = await db.saveUserCart(req.user.id, safeItems, coupon);
+    if (!saved) return res.status(404).json({ error: 'User account not found.' });
+    return res.json({ items: safeItems, appliedCoupon: coupon });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.get('/wishlist', verifyToken, async (req, res, next) => {
+  try {
+    return res.json({ products: await db.getUserWishlist(req.user.id) });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.put('/wishlist', verifyToken, async (req, res, next) => {
+  try {
+    const productIds = req.body.productIds;
+    if (!Array.isArray(productIds) || productIds.length > 200) {
+      return res.status(400).json({ error: 'Wishlist must contain no more than 200 products.' });
+    }
+    if (productIds.some(id => typeof id !== 'string')) {
+      return res.status(400).json({ error: 'Wishlist product IDs must be strings.' });
+    }
+    const knownIds = new Set((await db.getProducts()).map(product => product.id));
+    const safeIds = [...new Set(productIds.map(id => String(id).slice(0, 100)))].filter(id => knownIds.has(id));
+    const saved = await db.saveUserWishlist(req.user.id, safeIds);
+    if (!saved) return res.status(404).json({ error: 'User account not found.' });
+    return res.json({ products: await db.getUserWishlist(req.user.id) });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 // POST /api/auth/change-password
 router.post('/change-password', verifyToken, async (req, res, next) => {
   try {

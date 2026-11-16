@@ -31,6 +31,9 @@ const userSchema = new mongoose.Schema({
     maxlength: 300,
     default: ''
   },
+  cart: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  cartCoupon: { type: mongoose.Schema.Types.Mixed, default: null },
+  wishlist: { type: [String], default: [] },
   role: { type: String, enum: ['customer', 'admin'], default: 'customer' },
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: false });

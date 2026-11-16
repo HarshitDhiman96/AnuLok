@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { api } from '../services/api';
 import { useToast } from './ToastContext';
+import { useAuth } from './AuthContext';
 
 const CartContext = createContext(null);
 
@@ -25,11 +26,61 @@ export const CartProvider = ({ children }) => {
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { addToast } = useToast();
+  const { user, loading: authLoading } = useAuth();
+  const syncedUserId = useRef(null);
+  const saveQueue = useRef(Promise.resolve());
+
+  useEffect(() => {
+    if (authLoading) return;
+    let active = true;
+    syncedUserId.current = null;
+    if (!user) return undefined;
+
+    const syncCart = async () => {
+      try {
+        const { items: storedItems = [], appliedCoupon: storedCoupon = null } = await api.getCart();
+        if (!active) return;
+        const hasSyncedAccount = Boolean(localStorage.getItem('anulok_cart_owner'));
+        const guestItems = hasSyncedAccount
+          ? []
+          : JSON.parse(localStorage.getItem('anulok_cart') || '[]');
+        const merged = new Map(storedItems.map(item => [item.cartItemId, item]));
+        guestItems.forEach(item => {
+          const existing = merged.get(item.cartItemId);
+          merged.set(item.cartItemId, existing
+            ? { ...existing, quantity: existing.quantity + item.quantity }
+            : item);
+        });
+        const itemsToSave = [...merged.values()];
+        const couponToSave = storedCoupon || (!hasSyncedAccount ? appliedCoupon : null);
+        await api.saveCart(itemsToSave, couponToSave);
+        if (!active) return;
+        setItems(itemsToSave);
+        setAppliedCoupon(couponToSave);
+        localStorage.setItem('anulok_cart_owner', user.id);
+        syncedUserId.current = user.id;
+      } catch (error) {
+        if (active) addToast(error.message || 'Could not sync your cart with your account.', 'error');
+      }
+    };
+
+    syncCart();
+    return () => { active = false; };
+  }, [user?.id, authLoading]);
 
   // Save cart to localStorage
   useEffect(() => {
     localStorage.setItem('anulok_cart', JSON.stringify(items));
   }, [items]);
+
+  useEffect(() => {
+    if (!user || syncedUserId.current !== user.id) return;
+    const itemsToSave = items;
+    saveQueue.current = saveQueue.current
+      .catch(() => {})
+      .then(() => syncedUserId.current === user.id ? api.saveCart(itemsToSave, appliedCoupon) : null)
+      .catch(error => addToast(error.message || 'Could not save your cart.', 'error'));
+  }, [items, appliedCoupon, user?.id]);
 
   // Save coupon to localStorage
   useEffect(() => {
