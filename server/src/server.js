@@ -19,9 +19,21 @@ const CLIENT_DIST = path.join(__dirname, '../../client/dist');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+const allowedOrigins = new Set([
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'https://anu-lok.vercel.app',
+  ...(process.env.CORS_ORIGINS || '').split(',').map((origin) => origin.trim()).filter(Boolean),
+  ...(process.env.FRONTEND_URL || '').split(',').map((origin) => origin.trim()).filter(Boolean)
+]);
+
 app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  origin(origin, callback) {
+    // Allow server-to-server and local health checks that do not send an Origin header.
+    if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+    return callback(new Error(`Origin ${origin} is not allowed by CORS`));
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 

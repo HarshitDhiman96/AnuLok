@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, X, ArrowRight, Sparkles } from 'lucide-react';
 import { formatPrice } from '../../utils/formatters';
+import { API_BASE_URL } from '../../services/api';
 
 export default function SearchModal({ isOpen, onClose }) {
   const [query, setQuery] = useState('');
@@ -28,7 +29,7 @@ export default function SearchModal({ isOpen, onClose }) {
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/products?search=${encodeURIComponent(query)}`);
+        const res = await fetch(`${API_BASE_URL}/products?search=${encodeURIComponent(query)}`);
         const data = await res.json();
         setResults(data.products?.slice(0, 5) || []);
       } catch {

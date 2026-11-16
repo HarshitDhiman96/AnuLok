@@ -3,7 +3,6 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { db, normalizePhone } from '../storage/mongo.js';
 import { generateToken, verifyToken } from '../middleware/auth.js';
-import { sendRegistrationOtp, verifyRegistrationOtp } from '../services/otpService.js';
 
 const router = Router();
 const allowedGenders = ['female', 'male', 'other', 'non-binary', 'prefer-not-to-say'];
@@ -19,44 +18,10 @@ const publicUser = (user) => ({
   role: user.role
 });
 
-// POST /api/auth/send-registration-otp
-router.post('/send-registration-otp', async (req, res, next) => {
-  try {
-    const { email, name, phone } = req.body;
-    const normalizedEmail = String(email || '').trim().toLowerCase();
-    const normalizedName = String(name || '').trim();
-
-    if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-      return res.status(400).json({ error: 'Please enter a valid email address.' });
-    }
-
-    // Check if phone or email already registered
-    const checks = [{ email: normalizedEmail }];
-    if (phone) {
-      try {
-        const normalizedPhone = normalizePhone(phone);
-        checks.push({ phone: normalizedPhone });
-      } catch {
-        // phone validation handled in register if not valid
-      }
-    }
-
-    const exists = await db.checkUserExists(checks);
-    if (exists) {
-      return res.status(409).json({ error: 'An account with this email or phone number already exists. Please sign in.' });
-    }
-
-    const result = await sendRegistrationOtp({ email: normalizedEmail, name: normalizedName });
-    return res.json(result);
-  } catch (error) {
-    return next(error);
-  }
-});
-
 // POST /api/auth/register
 router.post('/register', async (req, res, next) => {
   try {
-    const { name, email, password, phone, age, gender, address, otp } = req.body;
+    const { name, email, password, phone, age, gender, address } = req.body;
     const normalizedName = String(name || '').trim();
     const normalizedEmail = String(email || '').trim().toLowerCase();
     const normalizedPhone = normalizePhone(phone);
@@ -85,16 +50,6 @@ router.post('/register', async (req, res, next) => {
       return res.status(400).json({ error: 'Enter your delivery address.' });
     }
 
-    // Email OTP Verification
-    if (!otp || String(otp).trim().length === 0) {
-      return res.status(400).json({ error: 'Email verification code is required.' });
-    }
-
-    const verification = verifyRegistrationOtp({ email: normalizedEmail, code: otp });
-    if (!verification.valid) {
-      return res.status(400).json({ error: verification.error || 'Invalid or expired verification code.' });
-    }
-
     const alternatives = [{ phone: normalizedPhone }, { email: normalizedEmail }];
     const exists = await db.checkUserExists(alternatives);
     if (exists) {
@@ -116,7 +71,7 @@ router.post('/register', async (req, res, next) => {
 
     const safeUser = publicUser(user);
     return res.status(201).json({
-      message: 'Account created and verified successfully.',
+      message: 'Account created successfully.',
       token: generateToken(safeUser),
       user: safeUser
     });

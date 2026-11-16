@@ -3,11 +3,15 @@
     {
       "id": "user-admin-1",
       "name": "Anulok Store Admin",
-      "email": "admin@anulok.com",
+      "email": "anulok@gmail.com",
       "password": "$2a$10$snWugQLV9zYlv2vp2OynpuO5E5Em28bei2xvBgbxzDLTLGPuSfVXy",
       "role": "admin",
-      "phone": "+91 98000 00001",
-      "createdAt": "2026-09-28T02:14:03.069Z"
+      "phone": "+919368656212",
+      "createdAt": "2026-09-28T02:14:03.069Z",
+      "age": 35,
+      "gender": "prefer-not-to-say",
+      "address": "Anulok Headquarters, Indiranagar, Bengaluru 560038",
+      "passwordHash": "$2a$12$6UO8GHfQTnZDjwCRyxAXouuU27RN/hFmd.hn4zFp0oE/NKTX.Atb."
     },
     {
       "id": "user-cust-1",
@@ -35,6 +39,18 @@
       "role": "customer",
       "phone": "+91 98200 11223",
       "createdAt": "2026-09-03T02:14:03.069Z"
+    },
+    {
+      "id": "user-1794809784485",
+      "createdAt": "2026-11-16T06:16:24.486Z",
+      "name": "nishita",
+      "email": "nishita@gmail.com",
+      "phone": "+916395388780",
+      "age": 21,
+      "gender": "female",
+      "address": "248001",
+      "passwordHash": "$2a$12$aXtVAE5kunV3ZroQVVPYbe2Sr14T4eAdESx2Iv/FFvPw6D3E/fSGK",
+      "role": "customer"
     }
   ],
   "products": [

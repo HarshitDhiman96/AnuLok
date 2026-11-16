@@ -1,4 +1,5 @@
-const API_BASE_URL = '/api';
+const configuredApiUrl = import.meta.env.VITE_API_URL || '/api';
+export const API_BASE_URL = configuredApiUrl.replace(/\/$/, '');
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('anulok_token');
@@ -18,17 +19,6 @@ export const api = {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to login');
-    return data;
-  },
-
-  async sendRegistrationOtp(email, name = '', phone = '') {
-    const res = await fetch(`${API_BASE_URL}/auth/send-registration-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, name, phone })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to send verification code');
     return data;
   },
 

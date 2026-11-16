@@ -55,6 +55,7 @@ class MongoStore {
       console.log('[Anulok Storage] No MONGODB_URI configured in server/.env. Operating in resilient local storage mode.');
     }
     this.isMongo = false;
+    await this.bootstrapAdmin();
   }
 
   async seedRecords() {
@@ -101,17 +102,16 @@ class MongoStore {
 
     const email = ADMIN_EMAIL.trim().toLowerCase();
     const phone = normalizePhone(ADMIN_PHONE);
-    const existingAdmin = await User.findOne({ role: 'admin' });
-    if (existingAdmin) return;
-
-    const conflictingUser = await User.findOne({ $or: [{ email }, { phone }] });
+    const conflictingUser = this.isMongo
+      ? await User.findOne({ role: { $ne: 'admin' }, $or: [{ email }, { phone }] })
+      : localStore.getUsers().find(user => user.role !== 'admin' &&
+        (user.email?.toLowerCase() === email || user.phone === phone));
     if (conflictingUser) {
       console.warn('Admin bootstrap email or phone is already assigned to another account.');
       return;
     }
 
-    await User.create({
-      id: `user-${new mongoose.Types.ObjectId().toString()}`,
+    const adminData = {
       name: 'Anulok Store Admin',
       email,
       phone,
@@ -120,7 +120,25 @@ class MongoStore {
       address: 'Anulok Headquarters, Indiranagar, Bengaluru 560038',
       passwordHash: await bcrypt.hash(ADMIN_PASSWORD, 12),
       role: 'admin'
-    });
+    };
+
+    if (this.isMongo) {
+      const existingAdmin = await User.findOne({ role: 'admin' });
+      if (existingAdmin) {
+        await User.updateOne({ id: existingAdmin.id }, { $set: adminData });
+      } else {
+        await User.create({ id: `user-${new mongoose.Types.ObjectId().toString()}`, ...adminData });
+      }
+      return;
+    }
+
+    const users = localStore.getUsers();
+    const existingAdmin = users.find(user => user.role === 'admin');
+    if (existingAdmin) {
+      localStore.updateUser(existingAdmin.id, adminData);
+    } else {
+      localStore.addUser({ id: `user-${Date.now()}`, ...adminData });
+    }
   }
 
   // User operations

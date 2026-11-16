@@ -37,9 +37,16 @@ Built with a bespoke aesthetic: warm cream, linen, natural teak wood, honed marb
 3. Set a randomly generated `JWT_SECRET` value (at least 32 characters).
 4. To create the first administrator, set `ADMIN_EMAIL`, `ADMIN_PHONE`, and `ADMIN_PASSWORD` together.
 
-New customer accounts require name, Indian phone number, age, gender, and password; email is optional. Passwords are bcrypt-hashed before storage. Sign-in accepts an email address or phone number and password. Phone verification by OTP is not used.
+New customer accounts require name, email, Indian phone number, age, gender, address, and password. Accounts are created immediately without email verification. Passwords are bcrypt-hashed before storage. Sign-in accepts an email address or phone number and password. The configured `ADMIN_EMAIL`, `ADMIN_PHONE`, and `ADMIN_PASSWORD` credentials are applied to the admin account at server startup; public registration always creates customer accounts.
 
 The existing local JSON store is read only as a one-time seed for products, categories, coupons, and orders when the corresponding MongoDB collections are empty. Legacy demo users are not migrated; create a new administrator using the environment variables above.
+
+### Production deployment URLs
+
+- Frontend (Vercel): `https://anu-lok.vercel.app`
+- Backend API (Render): `https://anulok.onrender.com`
+- The Vercel build uses `VITE_API_URL=https://anulok.onrender.com/api` (also set this environment variable in Vercel if you manage deployment settings there).
+- Set `FRONTEND_URL=https://anu-lok.vercel.app` in the Render environment. Additional allowed browser origins can be provided in `CORS_ORIGINS` as a comma-separated list.
 
 ---
 
