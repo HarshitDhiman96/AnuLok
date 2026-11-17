@@ -422,8 +422,8 @@ export default function ShopPage() {
             onClick={() => setMobileFilterOpen(false)}
             className="absolute inset-0 bg-black/50 backdrop-blur-xs"
           />
-          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-            <div className="w-screen max-w-sm bg-white p-6 shadow-2xl flex flex-col justify-between overflow-y-auto">
+          <div className="fixed inset-y-0 right-0 flex max-w-full">
+            <div className="w-screen max-w-sm bg-white p-4 shadow-2xl flex flex-col justify-between overflow-y-auto sm:p-6">
               <div>
                 <div className="flex items-center justify-between pb-4 border-b border-stone-200 mb-6">
                   <h3 className="font-serif text-xl font-bold text-anulok-espresso">Filters</h3>

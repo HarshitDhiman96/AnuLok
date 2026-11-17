@@ -22,8 +22,8 @@ export default function QuickViewModal({ product, isOpen, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-      <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl overflow-hidden border border-stone-200 animate-slide-up">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-2 backdrop-blur-sm animate-fade-in sm:items-center sm:p-4">
+      <div className="relative my-auto max-h-[calc(100dvh-1rem)] w-full max-w-3xl overflow-y-auto rounded-2xl border border-stone-200 bg-white shadow-2xl animate-slide-up sm:max-h-[calc(100dvh-2rem)]">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -34,7 +34,7 @@ export default function QuickViewModal({ product, isOpen, onClose }) {
 
         <div className="grid grid-cols-1 md:grid-cols-2">
           {/* Images */}
-          <div className="bg-anulok-linen p-6 flex flex-col justify-between">
+          <div className="bg-anulok-linen p-3 flex flex-col justify-between sm:p-6">
             <div className="aspect-square rounded-xl overflow-hidden bg-stone-100 shadow-inner">
               <img
                 src={product.images?.[selectedImg] || product.images?.[0]}
@@ -61,7 +61,7 @@ export default function QuickViewModal({ product, isOpen, onClose }) {
           </div>
 
           {/* Details */}
-          <div className="p-6 md:p-8 flex flex-col justify-between">
+          <div className="p-4 sm:p-6 md:p-8 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
                 <span className="text-xs uppercase tracking-widest text-anulok-wood font-semibold">

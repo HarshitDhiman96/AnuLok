@@ -6,14 +6,19 @@ import { api } from '../../services/api';
 
 export default function FeaturedProducts() {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchFeatured = async () => {
       try {
-        const res = await api.getProducts({ featured: true });
-        setProducts(res.products || []);
+        const [productRes, categoryRes] = await Promise.all([
+          api.getProducts({ featured: true }),
+          api.getCategories()
+        ]);
+        setProducts(productRes.products || []);
+        setCategories(categoryRes.categories || []);
       } catch (err) {
         console.error('Failed to load featured products', err);
       } finally {
@@ -25,10 +30,7 @@ export default function FeaturedProducts() {
 
   const filterTabs = [
     { label: 'All Featured', value: 'all' },
-    { label: 'Living Room', value: 'sofas' },
-    { label: 'Dining', value: 'dining' },
-    { label: 'Bedroom', value: 'beds' },
-    { label: 'Lounge Chairs', value: 'chairs' }
+    ...categories.map(category => ({ label: category.name, value: category.slug }))
   ];
 
   const displayedProducts = activeTab === 'all'

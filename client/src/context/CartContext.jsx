@@ -30,6 +30,17 @@ export const CartProvider = ({ children }) => {
   const syncedUserId = useRef(null);
   const saveQueue = useRef(Promise.resolve());
 
+  // Remove stale guest cart entries whose products have been deleted from the catalog.
+  useEffect(() => {
+    if (authLoading || user) return;
+    api.getProducts()
+      .then(({ products = [] }) => {
+        const liveProductIds = new Set(products.map(product => product.id));
+        setItems(current => current.filter(item => liveProductIds.has(item.id)));
+      })
+      .catch(() => {});
+  }, [authLoading, user?.id]);
+
   useEffect(() => {
     if (authLoading) return;
     let active = true;

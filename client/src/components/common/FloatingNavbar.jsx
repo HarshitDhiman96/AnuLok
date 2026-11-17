@@ -7,9 +7,9 @@ import { OPENING_SCROLL_DISTANCE } from '../home/OpeningExperience';
 const links = [
   { label: 'Home', path: '/', Icon: House },
   { label: 'Shop', path: '/shop', Icon: Store },
-  { label: 'Support', path: '/contact', Icon: Headphones },
+  { label: 'Support', path: '/contact', Icon: Headphones, className: 'max-[399px]:hidden' },
   { label: 'Cart', path: '/cart', Icon: ShoppingCart },
-  { label: 'About Us', path: '/about', Icon: Info },
+  { label: 'About Us', path: '/about', Icon: Info, className: 'max-[399px]:hidden' },
   { label: 'Profile', path: '/account', Icon: UserRound },
 ];
 
@@ -35,7 +35,7 @@ export default function FloatingNavbar() {
 
   return (
     <div
-      className={`fixed inset-x-0 bottom-5 z-50 flex justify-center px-3 pb-[env(safe-area-inset-bottom)] transition-all duration-300 ${
+      className={`fixed inset-x-0 bottom-2 z-50 flex justify-center px-2 pb-[env(safe-area-inset-bottom)] transition-all duration-300 sm:bottom-5 sm:px-3 ${
         isVisible
           ? 'translate-y-0 opacity-100'
           : 'pointer-events-none translate-y-5 opacity-0'
@@ -43,7 +43,7 @@ export default function FloatingNavbar() {
     >
       <nav
         aria-label="Quick navigation"
-        className="relative flex items-stretch overflow-visible rounded-xl border border-white/70 bg-white/95 shadow-[0_12px_36px_rgba(31,29,27,0.18)] backdrop-blur-xl"
+        className="relative flex max-w-full items-stretch overflow-visible rounded-xl border border-white/70 bg-white/95 shadow-[0_12px_36px_rgba(31,29,27,0.18)] backdrop-blur-xl"
       >
         {menuOpen && (
           <div className="absolute bottom-full left-0 mb-3 min-w-48 overflow-hidden rounded-xl border border-anulok-stone/60 bg-anulok-cream p-2 shadow-xl">
@@ -73,7 +73,7 @@ export default function FloatingNavbar() {
           {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
 
-        {links.map(({ label, path, Icon }) => {
+        {links.map(({ label, path, Icon, className = '' }) => {
               const isActive = location.pathname === path || (path === '/account' && location.pathname.startsWith('/account'));
           return (
             <Link
@@ -81,7 +81,7 @@ export default function FloatingNavbar() {
               to={path}
               aria-label={label}
               aria-current={isActive ? 'page' : undefined}
-              className={`relative flex min-w-[52px] flex-col items-center justify-center gap-1 px-1.5 py-2 text-anulok-espresso transition-colors hover:bg-anulok-linen sm:min-w-[84px] sm:px-4 ${
+              className={`${className} relative flex min-w-[48px] flex-col items-center justify-center gap-1 px-1 py-2 text-anulok-espresso transition-colors hover:bg-anulok-linen sm:min-w-[84px] sm:px-4 ${
                 isActive ? 'text-anulok-wood' : ''
                 } ${label === 'Profile' ? 'min-w-[64px] rounded-r-xl sm:min-w-[84px]' : ''}`}
             >

@@ -67,7 +67,7 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             {/* Left: Mobile Hamburger & Desktop Links */}
-            <div className="flex items-center gap-6">
+            <div className="flex min-w-0 items-center gap-1 sm:gap-6">
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -77,7 +77,7 @@ export default function Navbar() {
                 {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
 
-              <BrandLogo />
+              <BrandLogo compact className="max-w-[112px] sm:max-w-none" />
             </div>
 
             {/* Middle: Desktop Nav Links */}
@@ -102,12 +102,12 @@ export default function Navbar() {
             </nav>
 
             {/* Right: Actions (Search, Wishlist, Cart, User) */}
-            <div className="flex items-center gap-3 sm:gap-4">
+            <div className="flex shrink-0 items-center gap-0.5 sm:gap-4">
               {/* Search Icon */}
               <button
                 type="button"
                 onClick={() => setSearchOpen(true)}
-                className="p-2.5 text-anulok-espresso hover:text-anulok-wood hover:bg-stone-200/50 rounded-full transition-colors"
+                className="p-2 text-anulok-espresso hover:text-anulok-wood hover:bg-stone-200/50 rounded-full transition-colors sm:p-2.5"
                 aria-label="Search furniture"
               >
                 <Search className="w-5 h-5" />
@@ -131,7 +131,7 @@ export default function Navbar() {
               <button
                 type="button"
                 onClick={openDrawer}
-                className="relative p-2.5 text-anulok-espresso hover:text-anulok-wood hover:bg-stone-200/50 rounded-full transition-colors"
+                className="relative p-2 text-anulok-espresso hover:text-anulok-wood hover:bg-stone-200/50 rounded-full transition-colors sm:p-2.5"
                 aria-label="Shopping Cart"
               >
                 <ShoppingBag className="w-5 h-5" />

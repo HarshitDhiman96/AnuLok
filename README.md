@@ -39,7 +39,7 @@ Built with a bespoke aesthetic: warm cream, linen, natural teak wood, honed marb
 
 New customer accounts require name, email, Indian phone number, age, gender, address, and password. Accounts are created immediately without email verification. Passwords are bcrypt-hashed before storage. Sign-in accepts an email address or phone number and password. The configured `ADMIN_EMAIL`, `ADMIN_PHONE`, and `ADMIN_PASSWORD` credentials are applied to the admin account at server startup; public registration always creates customer accounts.
 
-The existing local JSON store is read only as a one-time seed for products, categories, coupons, and orders when the corresponding MongoDB collections are empty. Legacy demo users are not migrated; create a new administrator using the environment variables above.
+MongoDB stores products, categories, coupons, orders, and reviews in separate collections with dedicated Mongoose models. Existing category, coupon, order, and review rows in the legacy `StoreRecord` collection are migrated at startup. Legacy products are removed during that migration, and product seed data is disabled so only products added through the admin panel appear in the catalog. The local JSON store remains a development fallback; its product list has also been cleared. Legacy demo users are not migrated; create an administrator using the environment variables above.
 
 ### Production deployment URLs
 

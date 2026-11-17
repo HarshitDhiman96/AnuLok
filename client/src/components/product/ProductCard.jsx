@@ -81,7 +81,7 @@ export default function ProductCard({ product }) {
 
             <button
               onClick={handleQuickView}
-              className="w-9 h-9 rounded-full bg-white/90 hover:bg-white text-stone-600 hover:text-anulok-wood flex items-center justify-center backdrop-blur-md transition-all shadow-xs opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0"
+              className="w-9 h-9 rounded-full bg-white/90 hover:bg-white text-stone-600 hover:text-anulok-wood flex items-center justify-center backdrop-blur-md transition-all shadow-xs [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:translate-y-2 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-hover:translate-y-0"
               title="Quick View"
               aria-label="Quick View button"
             >

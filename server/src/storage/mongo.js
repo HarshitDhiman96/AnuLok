@@ -6,10 +6,14 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { User } from '../models/User.js';
 import { StoreRecord } from '../models/StoreRecord.js';
+import { Product } from '../models/Product.js';
+import { Category } from '../models/Category.js';
+import { Coupon } from '../models/Coupon.js';
+import { Order } from '../models/Order.js';
+import { Review } from '../models/Review.js';
 import {
   db as localStore,
   initialCategories,
-  initialProducts,
   initialCoupons,
   initialOrders
 } from './db.js';
@@ -24,7 +28,13 @@ const plainUser = (user) => {
   return safeUser;
 };
 
-const recordData = (record) => record?.data || null;
+const entityModels = { products: Product, categories: Category, coupons: Coupon, orders: Order, reviews: Review };
+const plainRecord = (record) => {
+  if (!record) return null;
+  const value = record.toObject ? record.toObject() : record;
+  const { _id, __v, ...data } = value;
+  return data;
+};
 
 class MongoStore {
   constructor() {
@@ -42,8 +52,9 @@ class MongoStore {
         });
         this.isMongo = true;
         console.log('[Anulok Storage] Connected to MongoDB Atlas successfully.');
-        await StoreRecord.init();
+        await Promise.all(Object.values(entityModels).map(Model => Model.init()));
         await User.init();
+        await this.migrateStoreRecords();
         await this.seedRecords();
         await this.bootstrapAdmin();
         return;
@@ -62,6 +73,28 @@ class MongoStore {
     await this.bootstrapAdmin();
   }
 
+  async migrateStoreRecords() {
+    const legacyProducts = await StoreRecord.find({ kind: 'products' }).lean();
+    if (legacyProducts.length) {
+      // Product data is intentionally reset once during the StoreRecord migration.
+      await Product.deleteMany({});
+      await StoreRecord.deleteMany({ kind: 'products' });
+      console.log(`[Anulok Storage] Removed ${legacyProducts.length} legacy products; the catalog is ready for admin additions.`);
+    }
+
+    for (const kind of ['categories', 'coupons', 'orders', 'reviews']) {
+      const Model = entityModels[kind];
+      const legacyRows = await StoreRecord.find({ kind }).sort({ _id: 1 }).lean();
+      if (legacyRows.length) {
+        for (const row of legacyRows) {
+          const data = { ...row.data, id: String(row.data.id || row.id) };
+          await Model.updateOne({ id: data.id }, { $setOnInsert: data }, { upsert: true });
+        }
+        await StoreRecord.deleteMany({ kind });
+      }
+    }
+  }
+
   async seedRecords() {
     let legacyData = {};
     if (fs.existsSync(legacyStorePath)) {
@@ -73,7 +106,6 @@ class MongoStore {
     }
 
     const defaults = {
-      products: initialProducts,
       categories: initialCategories,
       coupons: initialCoupons,
       orders: initialOrders,
@@ -81,17 +113,13 @@ class MongoStore {
     };
 
     for (const [collection, fallback] of Object.entries(defaults)) {
-      const count = await StoreRecord.countDocuments({ kind: collection });
-      if (count > 0) continue;
+      const Model = entityModels[collection];
+      if (await Model.exists({})) continue;
       const rows = Array.isArray(legacyData[collection]) && legacyData[collection].length
         ? legacyData[collection]
         : fallback;
       if (rows.length) {
-        await StoreRecord.insertMany(rows.map((data) => ({
-          kind: collection,
-          id: String(data.id),
-          data
-        })));
+        await Model.insertMany(rows.map(data => ({ ...data, id: String(data.id) })));
       }
     }
   }
@@ -273,12 +301,19 @@ class MongoStore {
   }
 
   async getUserCart(id) {
+    const liveProductIds = new Set((await this.getProducts()).map(product => product.id));
     if (this.isMongo) {
       const user = await User.findOne({ id }).select('cart cartCoupon').lean();
-      return { items: user?.cart || [], appliedCoupon: user?.cartCoupon || null };
+      const items = (user?.cart || []).filter(item => liveProductIds.has(item.id));
+      if (user && items.length !== (user.cart || []).length) {
+        await User.updateOne({ id }, { $set: { cart: items } });
+      }
+      return { items, appliedCoupon: user?.cartCoupon || null };
     }
     const user = localStore.getUserById(id);
-    return { items: user?.cart || [], appliedCoupon: user?.cartCoupon || null };
+    const items = (user?.cart || []).filter(item => liveProductIds.has(item.id));
+    if (user && items.length !== (user.cart || []).length) localStore.updateUser(id, { cart: items });
+    return { items, appliedCoupon: user?.cartCoupon || null };
   }
 
   async saveUserCart(id, items, coupon) {
@@ -309,17 +344,14 @@ class MongoStore {
   // Products
   async getProducts() {
     if (this.isMongo) {
-      return this.getRecords('products');
+      return (await Product.find().sort({ _id: 1 }).lean()).map(plainRecord);
     }
     return localStore.getProducts();
   }
 
   async getProductById(id) {
     if (this.isMongo) {
-      return (await StoreRecord.findOne({
-        kind: 'products',
-        $or: [{ id }, { 'data.slug': id }]
-      }).lean())?.data || null;
+      return plainRecord(await Product.findOne({ $or: [{ id }, { slug: id }] }).lean());
     }
     return localStore.getProductById(id);
   }
@@ -335,7 +367,7 @@ class MongoStore {
       ...product
     };
     if (this.isMongo) {
-      await this.insertRecord('products', newProduct);
+      await Product.create(newProduct);
     } else {
       localStore.addProduct(newProduct);
     }
@@ -344,35 +376,40 @@ class MongoStore {
 
   async updateProduct(id, updates) {
     if (this.isMongo) {
-      return this.updateRecord('products', id, updates);
+      return this.updateEntity(Product, id, updates);
     }
     return localStore.updateProduct(id, updates);
   }
 
   async deleteProduct(id) {
     if (this.isMongo) {
-      return this.deleteRecord('products', id);
+      return this.deleteEntity(Product, id);
     }
     return localStore.deleteProduct(id);
   }
 
   // Categories
   async getCategories() {
-    if (this.isMongo) {
-      return (await this.getRecords('categories')).map((category, index) => ({
-        ...category,
-        featured: category.featured ?? index < 4
-      }));
-    }
-    return localStore.getCategories().map((category, index) => ({
+    const [categories, products] = this.isMongo
+      ? await Promise.all([
+          Category.find().sort({ _id: 1 }).lean().then(rows => rows.map(plainRecord)),
+          this.getProducts()
+        ])
+      : [localStore.getCategories(), localStore.getProducts()];
+    const counts = products.reduce((result, product) => {
+      if (product.category) result[product.category] = (result[product.category] || 0) + 1;
+      return result;
+    }, {});
+    return categories.map((category, index) => ({
       ...category,
+      itemCount: counts[category.slug] || 0,
       featured: category.featured ?? index < 4
     }));
   }
 
   async getCategoryById(id) {
     if (this.isMongo) {
-      return recordData(await StoreRecord.findOne({ kind: 'categories', id }).lean());
+      return plainRecord(await Category.findOne({ $or: [{ id }, { slug: id }] }).lean());
     }
     return localStore.getCategoryById(id);
   }
@@ -387,7 +424,7 @@ class MongoStore {
       ...category
     };
     if (this.isMongo) {
-      await this.insertRecord('categories', newCategory);
+      await Category.create(newCategory);
     } else {
       localStore.addCategory(newCategory);
     }
@@ -396,14 +433,14 @@ class MongoStore {
 
   async updateCategory(id, updates) {
     if (this.isMongo) {
-      return this.updateRecord('categories', id, updates);
+      return this.updateEntity(Category, id, updates);
     }
     return localStore.updateCategory(id, updates);
   }
 
   async deleteCategory(id) {
     if (this.isMongo) {
-      return this.deleteRecord('categories', id);
+      return this.deleteEntity(Category, id);
     }
     return localStore.deleteCategory(id);
   }
@@ -411,7 +448,7 @@ class MongoStore {
   // Coupons
   async getCoupons() {
     if (this.isMongo) {
-      return this.getRecords('coupons');
+      return (await Coupon.find().sort({ _id: 1 }).lean()).map(plainRecord);
     }
     return localStore.getCoupons();
   }
@@ -420,11 +457,7 @@ class MongoStore {
     if (!code) return null;
     const normalized = code.trim().toUpperCase();
     if (this.isMongo) {
-      const found = await StoreRecord.findOne({
-        kind: 'coupons',
-        'data.code': normalized
-      }).lean();
-      return recordData(found);
+      return plainRecord(await Coupon.findOne({ code: normalized }).lean());
     }
     return localStore.getCouponByCode(normalized);
   }
@@ -439,7 +472,7 @@ class MongoStore {
       code: coupon.code.toUpperCase()
     };
     if (this.isMongo) {
-      await this.insertRecord('coupons', newCoupon);
+      await Coupon.create(newCoupon);
     } else {
       localStore.addCoupon(newCoupon);
     }
@@ -448,14 +481,14 @@ class MongoStore {
 
   async updateCoupon(id, updates) {
     if (this.isMongo) {
-      return this.updateRecord('coupons', id, updates);
+      return this.updateEntity(Coupon, id, updates);
     }
     return localStore.updateCoupon(id, updates);
   }
 
   async deleteCoupon(id) {
     if (this.isMongo) {
-      return this.deleteRecord('coupons', id);
+      return this.deleteEntity(Coupon, id);
     }
     return localStore.deleteCoupon(id);
   }
@@ -463,14 +496,14 @@ class MongoStore {
   // Orders
   async getOrders() {
     if (this.isMongo) {
-      return this.getRecords('orders');
+      return (await Order.find().sort({ _id: 1 }).lean()).map(plainRecord);
     }
     return localStore.getOrders();
   }
 
   async getOrderById(id) {
     if (this.isMongo) {
-      return recordData(await StoreRecord.findOne({ kind: 'orders', id }).lean());
+      return plainRecord(await Order.findOne({ id }).lean());
     }
     return localStore.getOrderById(id);
   }
@@ -487,7 +520,7 @@ class MongoStore {
     };
 
     if (this.isMongo) {
-      const orders = await this.getRecords('orders');
+      const orders = await this.getOrders();
       return orders.filter(matches);
     }
     const orders = localStore.getOrders();
@@ -508,37 +541,25 @@ class MongoStore {
       const session = await mongoose.startSession();
       try {
         await session.withTransaction(async () => {
-          await StoreRecord.create([{
-            kind: 'orders',
-            id: orderId,
-            data: newOrder
-          }], { session });
+          await Order.create([newOrder], { session });
 
           for (const item of order.items || []) {
-            const product = await StoreRecord.findOne({
-              kind: 'products',
-              id: item.productId
-            }).session(session);
+            const product = await Product.findOne({ id: item.productId }).session(session);
             if (!product) throw new Error(`Product ${item.productId} is no longer available.`);
             const quantity = Math.max(1, Math.floor(Number(item.quantity) || 1));
-            if (typeof product.data.stock === 'number') {
-              if (product.data.stock < quantity) {
-                throw new Error(`${product.data.name || 'A product'} does not have enough stock.`);
+            if (typeof product.stock === 'number') {
+              if (product.stock < quantity) {
+                throw new Error(`${product.name || 'A product'} does not have enough stock.`);
               }
-              product.data.stock -= quantity;
+              product.stock -= quantity;
             }
-            product.markModified('data');
             await product.save({ session });
           }
 
           if (order.couponCode) {
-            const coupon = await StoreRecord.findOne({
-              kind: 'coupons',
-              'data.code': order.couponCode.trim().toUpperCase()
-            }).session(session);
+            const coupon = await Coupon.findOne({ code: order.couponCode.trim().toUpperCase() }).session(session);
             if (coupon) {
-              coupon.data.usageCount = (coupon.data.usageCount || 0) + 1;
-              coupon.markModified('data');
+              coupon.usageCount = (coupon.usageCount || 0) + 1;
               await coupon.save({ session });
             }
           }
@@ -560,32 +581,17 @@ class MongoStore {
       updates.paymentStatus = 'Paid';
     }
     if (this.isMongo) {
-      return this.updateRecord('orders', id, updates);
+      return this.updateEntity(Order, id, updates);
     }
     return localStore.updateOrderStatus(id, status);
   }
 
-  async getRecords(collection) {
-    const records = await StoreRecord.find({ kind: collection }).sort({ _id: 1 }).lean();
-    return records.map((record) => record.data);
+  async updateEntity(Model, id, updates) {
+    return plainRecord(await Model.findOneAndUpdate({ id }, { $set: updates }, { new: true, runValidators: true }).lean());
   }
 
-  async insertRecord(collection, data) {
-    await StoreRecord.create({ kind: collection, id: String(data.id), data });
-    return data;
-  }
-
-  async updateRecord(collection, id, updates) {
-    const record = await StoreRecord.findOne({ kind: collection, id });
-    if (!record) return null;
-    record.data = { ...record.data, ...updates };
-    record.markModified('data');
-    await record.save();
-    return record.data;
-  }
-
-  async deleteRecord(collection, id) {
-    const result = await StoreRecord.deleteOne({ kind: collection, id });
+  async deleteEntity(Model, id) {
+    const result = await Model.deleteOne({ id });
     return result.deletedCount > 0;
   }
 }
