@@ -43,10 +43,10 @@ MongoDB stores products, categories, coupons, orders, and reviews in separate co
 
 ### Production deployment URLs
 
-- Frontend (Vercel): `https://anu-lok.vercel.app`
+- Frontend (custom domain): `https://www.anulokfurniture.shop`
 - Backend API (Render): `https://anulok.onrender.com`
 - The Vercel build uses `VITE_API_URL=https://anulok.onrender.com/api` (also set this environment variable in Vercel if you manage deployment settings there).
-- Set `FRONTEND_URL=https://anu-lok.vercel.app` in the Render environment. Additional allowed browser origins can be provided in `CORS_ORIGINS` as a comma-separated list.
+- Set `FRONTEND_URL=https://www.anulokfurniture.shop` in the Render environment. Additional allowed browser origins can be provided in `CORS_ORIGINS` as a comma-separated list.
 - Set `MONGODB_URI` and `MONGODB_DB_NAME` in Render. Production now refuses to start if MongoDB is missing or unavailable, instead of accepting writes into temporary local storage.
 - Signed-in customer carts and wishlists are saved to their MongoDB user records; guest carts remain in that browser until the customer signs in. Product, category, coupon, order, profile, password, and inventory changes use the backend database.
 
