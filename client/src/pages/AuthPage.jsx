@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import BrandLogo from '../components/common/BrandLogo';
+import { api } from '../services/api';
 
 export default function AuthPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -26,6 +27,8 @@ export default function AuthPage() {
   const [activeTab, setActiveTab] = useState(initialMode);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
 
   // If already logged in, redirect to home or admin
   useEffect(() => {
@@ -90,7 +93,7 @@ export default function AuthPage() {
     }
   };
 
-  // Validate details and create a customer account directly.
+  // Send a code first, then create the account only after the code is checked.
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     const { name, email, phone, age, gender, address, password } = registerData;
@@ -122,6 +125,16 @@ export default function AuthPage() {
 
     setLoading(true);
     try {
+      if (!verificationSent) {
+        try {
+          await api.sendRegistrationCode(email.trim());
+          setVerificationSent(true);
+          addToast('Verification code sent. Check your email.');
+        } catch (error) {
+          addToast(error.message, 'error');
+        }
+        return;
+      }
       await register({
         name: registerData.name.trim(),
         email: registerData.email.trim(),
@@ -129,7 +142,8 @@ export default function AuthPage() {
         age: Number(registerData.age),
         gender: registerData.gender,
         address: registerData.address.trim(),
-        password: registerData.password
+        password: registerData.password,
+        verificationCode
       });
       navigate('/');
     } catch {
@@ -285,13 +299,39 @@ export default function AuthPage() {
                         type="email"
                         required
                         value={registerData.email}
-                        onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
+                      onChange={(e) => {
+                        setRegisterData({ ...registerData, email: e.target.value });
+                        setVerificationSent(false);
+                        setVerificationCode('');
+                      }}
                         placeholder="vikram@domain.com"
                         className="w-full pl-10 pr-4 py-2.5 bg-anulok-cream border border-stone-300 rounded-xl text-xs outline-none focus:border-anulok-wood transition-colors"
                       />
                       <Mail className="w-4 h-4 text-stone-400 absolute left-3.5 top-3" />
                     </div>
                   </div>
+
+                  {verificationSent && (
+                    <div className="sm:col-span-2">
+                      <label className="text-xs uppercase font-bold tracking-wider text-stone-600 block mb-1.5" htmlFor="email-verification-code">
+                        Email verification code
+                      </label>
+                      <input
+                        id="email-verification-code"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        maxLength={6}
+                        pattern="[0-9]{6}"
+                        required
+                        value={verificationCode}
+                        onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="Enter the 6-digit code"
+                        className="w-full bg-anulok-cream border border-stone-300 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-anulok-wood"
+                      />
+                      <p className="mt-1 text-xs text-stone-500">The code expires in 10 minutes.</p>
+                    </div>
+                  )}
 
                   {/* Phone Number */}
                   <div>
@@ -400,7 +440,7 @@ export default function AuthPage() {
                   disabled={loading}
                   className="w-full py-3.5 bg-anulok-espresso hover:bg-anulok-wood text-white font-semibold text-xs uppercase tracking-widest rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-md hover:shadow-lg disabled:opacity-50 mt-6"
                 >
-                  {loading ? 'Creating Account...' : 'Create Account'} <ArrowRight className="w-4 h-4 text-anulok-amber" />
+                  {loading ? (verificationSent ? 'Verifying...' : 'Sending code...') : (verificationSent ? 'Verify & Create Account' : 'Send Verification Code')} <ArrowRight className="w-4 h-4 text-anulok-amber" />
                 </button>
 
                 <div className="pt-4 border-t border-stone-100 text-center text-xs text-stone-500">

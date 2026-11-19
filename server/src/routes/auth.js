@@ -1,12 +1,57 @@
 import '../config/env.js';
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
-import { randomUUID } from 'crypto';
+import { randomUUID, randomInt, createHash, timingSafeEqual } from 'crypto';
 import { db, normalizePhone } from '../storage/mongo.js';
 import { generateToken, verifyToken } from '../middleware/auth.js';
 
 const router = Router();
+const emailCodes = new Map();
 const allowedGenders = ['female', 'male', 'other', 'non-binary', 'prefer-not-to-say'];
+
+const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
+const codeHash = (email, code, salt) => createHash('sha256').update(`${email}:${salt}:${code}`).digest();
+
+// POST /api/auth/register/send-code
+router.post('/register/send-code', async (req, res, next) => {
+  try {
+    const email = normalizeEmail(req.body.email);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Enter a valid email address.' });
+    }
+    if (!process.env.RESEND_API_KEY) {
+      return res.status(503).json({ error: 'Email verification is not configured on the server.' });
+    }
+    if (await db.checkUserExists([{ email }])) {
+      return res.status(409).json({ error: 'An account with this email already exists.' });
+    }
+    const previous = emailCodes.get(email);
+    if (previous && Date.now() - previous.sentAt < 60_000) {
+      return res.status(429).json({ error: 'Please wait a minute before requesting another code.' });
+    }
+    const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+    const salt = randomUUID();
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM_EMAIL || 'noreply@anulokfurniture.shop',
+        to: [email],
+        subject: 'Your Anulok verification code',
+        html: `<p>Your Anulok verification code is:</p><p style="font-size:28px;font-weight:bold;letter-spacing:6px">${code}</p><p>This code expires in 10 minutes. If you did not request it, you can ignore this email.</p>`
+      })
+    });
+    if (!response.ok) {
+      const detail = await response.json().catch(() => ({}));
+      console.error('Resend email error:', detail);
+      return res.status(502).json({ error: 'Could not send the verification email. Please try again.' });
+    }
+    emailCodes.set(email, { hash: codeHash(email, code, salt), salt, expiresAt: Date.now() + 10 * 60_000, sentAt: Date.now(), attempts: 0 });
+    return res.json({ message: 'Verification code sent. Check your email.' });
+  } catch (error) {
+    return next(error);
+  }
+});
 
 const publicUser = (user) => ({
   id: user.id,
@@ -22,7 +67,7 @@ const publicUser = (user) => ({
 // POST /api/auth/register
 router.post('/register', async (req, res, next) => {
   try {
-    const { name, email, password, phone, age, gender, address } = req.body;
+    const { name, email, password, phone, age, gender, address, verificationCode } = req.body;
     const normalizedName = String(name || '').trim();
     const normalizedEmail = String(email || '').trim().toLowerCase();
     const normalizedPhone = normalizePhone(phone);
@@ -34,6 +79,17 @@ router.post('/register', async (req, res, next) => {
     }
     if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       return res.status(400).json({ error: 'Enter a valid email address.' });
+    }
+    const pendingCode = emailCodes.get(normalizedEmail);
+    const submittedCode = String(verificationCode || '').trim();
+    if (!pendingCode || pendingCode.expiresAt < Date.now()) {
+      emailCodes.delete(normalizedEmail);
+      return res.status(400).json({ error: 'Please request a new email verification code.' });
+    }
+    if (!/^\d{6}$/.test(submittedCode) || !timingSafeEqual(pendingCode.hash, codeHash(normalizedEmail, submittedCode, pendingCode.salt))) {
+      pendingCode.attempts += 1;
+      if (pendingCode.attempts >= 5) emailCodes.delete(normalizedEmail);
+      return res.status(400).json({ error: 'That code is incorrect. Please try again.' });
     }
     if (!password || password.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters.' });
@@ -71,6 +127,7 @@ router.post('/register', async (req, res, next) => {
     });
 
     const safeUser = publicUser(user);
+    emailCodes.delete(normalizedEmail);
     return res.status(201).json({
       message: 'Account created successfully.',
       token: generateToken(safeUser),
